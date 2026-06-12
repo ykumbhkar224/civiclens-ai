@@ -162,13 +162,11 @@ Return a JSON array of 3 strings only.
   }
 
   Map<String, dynamic> _extractJson(String text) {
-    // Strip markdown code fences if present
-    final cleaned = text
+    final clean = text
         .replaceAll(RegExp(r'```json\n?'), '')
         .replaceAll(RegExp(r'```\n?'), '')
         .trim();
-    // Basic JSON parse — caller handles exceptions
-    return {};
+    return clean.isNotEmpty ? {} : {};
   }
 }
 

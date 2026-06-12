@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/report_provider.dart';
+import '../../providers/user_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -12,6 +13,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final profileAsync = ref.watch(userProfileProvider);
     final myReportsAsync = ref.watch(myReportsProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -32,38 +34,75 @@ class ProfileScreen extends ConsumerWidget {
       );
     }
 
-    final name = user.userMetadata?['full_name'] as String? ?? user.email ?? 'User';
-    final city = user.userMetadata?['city'] as String? ?? 'Unknown city';
+    // Prefer profile data from DB; fall back to auth metadata
+    final profile = profileAsync.valueOrNull;
+    final name = profile?.fullName ?? user.userMetadata?['full_name'] as String? ?? user.email ?? 'User';
+    final city = profile?.city ?? user.userMetadata?['city'] as String? ?? 'Unknown city';
+    final civicScore = profile?.civicScore ?? 0;
+    final badges = profile?.badges ?? [];
     final initials = name.split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join().toUpperCase();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
+          if (profileAsync.isLoading)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {/* TODO: settings */},
+            icon: const Icon(Icons.refresh_outlined),
+            onPressed: () => ref.invalidate(userProfileProvider),
           ),
         ],
       ),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(userProfileProvider);
+          ref.invalidate(myReportsProvider);
+        },
+        child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Avatar + name
+          // Avatar + name + civic score
           Center(
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 44,
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Text(
-                    initials,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: colorScheme.primaryContainer,
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
                     ),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.emoji_events_rounded, size: 13, color: colorScheme.onPrimary),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$civicScore',
+                            style: TextStyle(fontSize: 11, color: colorScheme.onPrimary, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -88,6 +127,17 @@ class ProfileScreen extends ConsumerWidget {
                     color: colorScheme.outline,
                   ),
                 ),
+                if (badges.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    children: badges.map((b) => Chip(
+                      label: Text(b, style: const TextStyle(fontSize: 11)),
+                      avatar: const Icon(Icons.military_tech_outlined, size: 14),
+                      visualDensity: VisualDensity.compact,
+                    )).toList(),
+                  ),
+                ],
               ],
             ),
           ),
@@ -116,7 +166,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   _StatCard(
-                    value: '0',
+                    value: badges.length.toString(),
                     label: 'Badges',
                     icon: Icons.military_tech_outlined,
                     color: colorScheme.tertiaryContainer,
@@ -187,6 +237,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

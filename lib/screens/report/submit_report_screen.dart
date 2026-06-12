@@ -8,7 +8,7 @@ import 'package:latlong2/latlong.dart';
 import '../../models/report_model.dart';
 import '../../providers/location_provider.dart';
 import '../../providers/report_provider.dart';
-import '../../services/gemini_service.dart';
+import '../../providers/user_provider.dart';
 
 class SubmitReportScreen extends ConsumerStatefulWidget {
   const SubmitReportScreen({super.key});
@@ -110,7 +110,7 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
       latitude: _selectedLocation!.latitude,
       longitude: _selectedLocation!.longitude,
       address: _addressController.text.trim(),
-      city: 'Mumbai', // TODO: derive from profile
+      city: ref.read(userProfileProvider).valueOrNull?.city ?? 'Unknown',
       images: files.isEmpty ? null : files,
       tags: _aiClassification?.tags ?? [],
       department: _aiClassification?.department,

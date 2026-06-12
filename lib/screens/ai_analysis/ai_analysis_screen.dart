@@ -4,7 +4,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/report_provider.dart';
-import '../../services/gemini_service.dart';
 
 part 'ai_analysis_screen.g.dart';
 
