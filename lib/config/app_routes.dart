@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/splash_screen.dart';
@@ -18,7 +17,6 @@ import '../screens/ai_analysis/ai_analysis_screen.dart';
 
 part 'app_routes.g.dart';
 
-// Route name constants
 class AppRoutes {
   static const splash = '/';
   static const login = '/login';
@@ -33,24 +31,45 @@ class AppRoutes {
   static const aiAnalysis = '/ai-analysis';
 }
 
-@riverpod
+// ChangeNotifier that fires whenever Supabase auth state changes.
+// Used as GoRouter's refreshListenable so the router re-evaluates
+// its redirect without recreating the GoRouter instance.
+class _AuthChangeNotifier extends ChangeNotifier {
+  _AuthChangeNotifier() {
+    _subscription = Supabase.instance.client.auth.onAuthStateChange
+        .listen((_) => notifyListeners());
+  }
+
+  late final dynamic _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+@Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final authState = ref.watch(authStateProvider);
+  final authNotifier = _AuthChangeNotifier();
+  ref.onDispose(authNotifier.dispose);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
+    refreshListenable: authNotifier,
     redirect: (context, state) {
-      final isAuthenticated = authState.valueOrNull != null;
-      final isAuthRoute =
-          state.matchedLocation == AppRoutes.login ||
-          state.matchedLocation == AppRoutes.register ||
-          state.matchedLocation == AppRoutes.splash;
+      // Synchronous check — reliable immediately after sign-in/out
+      final isAuthenticated =
+          Supabase.instance.client.auth.currentSession != null;
+
+      final loc = state.matchedLocation;
+      final isAuthRoute = loc == AppRoutes.login ||
+          loc == AppRoutes.register ||
+          loc == AppRoutes.splash;
 
       if (!isAuthenticated && !isAuthRoute) return AppRoutes.login;
-      if (isAuthenticated && state.matchedLocation == AppRoutes.login) {
-        return AppRoutes.home;
-      }
+      if (isAuthenticated && isAuthRoute) return AppRoutes.home;
       return null;
     },
     routes: [
@@ -108,9 +127,7 @@ GoRouter appRouter(Ref ref) {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.error}'),
-      ),
+      body: Center(child: Text('Page not found: ${state.error}')),
     ),
   );
 }

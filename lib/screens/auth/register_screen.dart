@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_routes.dart';
 import '../../providers/auth_provider.dart';
@@ -53,7 +54,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         );
       } else if (next is AsyncData && next.value != null) {
-        context.go(AppRoutes.home);
+        // If session exists the router's refreshListenable will redirect to home.
+        // If email confirmation is required, session is null — show guidance.
+        final hasSession =
+            Supabase.instance.client.auth.currentSession != null;
+        if (!hasSession) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Account created! Check your email and confirm before signing in.',
+              ),
+              duration: Duration(seconds: 6),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.go(AppRoutes.login);
+        }
+        // else: router handles redirect to home automatically
       }
     });
 

@@ -46,9 +46,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             backgroundColor: colorScheme.error,
           ),
         );
-      } else if (next is AsyncData && next.value != null) {
-        context.go(AppRoutes.home);
       }
+      // Navigation is handled automatically by the router's refreshListenable.
     });
 
     return Scaffold(
