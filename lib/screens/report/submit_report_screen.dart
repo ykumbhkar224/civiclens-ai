@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +33,8 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
   List<XFile> _images = [];
   LatLng? _selectedLocation;
 
+  static const _fallbackCenter = LatLng(19.0760, 72.8777); // Mumbai
+
   @override
   void initState() {
     super.initState();
@@ -42,19 +46,23 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
       final location = await ref.read(currentLocationProvider.future);
       if (location != null && mounted) {
         setState(() => _selectedLocation = location);
-      } else if (mounted) {
-        // Fallback: show a snackbar so the user knows to allow location
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location unavailable. Allow location access in your browser, then retry.',
-            ),
-            duration: Duration(seconds: 5),
-            action: SnackBarAction(label: 'Retry', onPressed: () => _loadCurrentLocation()),
-          ),
-        );
       }
     } catch (_) {}
+  }
+
+  Future<void> _openMapPicker() async {
+    final initial = _selectedLocation ?? _fallbackCenter;
+    final picked = await showModalBottomSheet<LatLng>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _MapPickerSheet(initialLocation: initial),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedLocation = picked);
+    }
   }
 
   Future<void> _pickImages() async {
@@ -70,7 +78,6 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
       );
       return;
     }
-
     setState(() => _isClassifying = true);
     try {
       final gemini = ref.read(geminiServiceProvider);
@@ -81,7 +88,6 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
         setState(() {
           _aiClassification = result;
           _isClassifying = false;
-          // Auto-fill AI suggestions
           try {
             _category = ReportCategory.values.firstWhere(
               (c) => c.name == result.category,
@@ -109,7 +115,10 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location is required')),
+        SnackBar(
+          content: const Text('Please set a location first'),
+          action: SnackBarAction(label: 'Pick', onPressed: _openMapPicker),
+        ),
       );
       return;
     }
@@ -281,15 +290,14 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
               validator: (v) =>
                   v == null || v.trim().isEmpty ? 'Address is required' : null,
             ),
-            const SizedBox(height: 8),
-            if (_selectedLocation != null)
-              Chip(
-                avatar: const Icon(Icons.my_location, size: 16),
-                label: Text(
-                  'GPS: ${_selectedLocation!.latitude.toStringAsFixed(4)}, '
-                  '${_selectedLocation!.longitude.toStringAsFixed(4)}',
-                ),
-              ),
+            const SizedBox(height: 12),
+
+            // ── Location picker card ──────────────────────────────────────
+            _LocationPickerCard(
+              location: _selectedLocation,
+              onPickOnMap: _openMapPicker,
+              onRefreshGps: _loadCurrentLocation,
+            ),
             const SizedBox(height: 16),
 
             // Image picker
@@ -312,12 +320,19 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, i) => ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(_images[i].path),
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                    ),
+                    child: kIsWeb
+                        ? Image.network(
+                            _images[i].path,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(_images[i].path),
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
                   ),
                 ),
               ),
@@ -345,6 +360,214 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Location picker card ─────────────────────────────────────────────────────
+class _LocationPickerCard extends StatelessWidget {
+  final LatLng? location;
+  final VoidCallback onPickOnMap;
+  final VoidCallback onRefreshGps;
+
+  const _LocationPickerCard({
+    required this.location,
+    required this.onPickOnMap,
+    required this.onRefreshGps,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final hasLocation = location != null;
+
+    return Card(
+      color: hasLocation ? cs.secondaryContainer : cs.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              hasLocation ? Icons.location_on : Icons.location_off_outlined,
+              color: hasLocation ? cs.secondary : cs.error,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasLocation ? 'Location set' : 'No location set',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  if (hasLocation)
+                    Text(
+                      '${location!.latitude.toStringAsFixed(5)}, '
+                      '${location!.longitude.toStringAsFixed(5)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    )
+                  else
+                    Text(
+                      'Tap "Pick on Map" to set location',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: cs.error),
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: 'Use GPS',
+              icon: const Icon(Icons.my_location_outlined),
+              onPressed: onRefreshGps,
+            ),
+            FilledButton.tonal(
+              onPressed: onPickOnMap,
+              child: const Text('Pick on Map'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Map picker bottom sheet ──────────────────────────────────────────────────
+class _MapPickerSheet extends StatefulWidget {
+  final LatLng initialLocation;
+  const _MapPickerSheet({required this.initialLocation});
+
+  @override
+  State<_MapPickerSheet> createState() => _MapPickerSheetState();
+}
+
+class _MapPickerSheetState extends State<_MapPickerSheet> {
+  late LatLng _pinLocation;
+  late final MapController _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pinLocation = widget.initialLocation;
+    _mapController = MapController();
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.75,
+      child: Column(
+        children: [
+          // Handle bar
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text(
+                  'Tap on map to set location',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(_pinLocation),
+                  child: const Text('Confirm'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Stack(
+              children: [
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _pinLocation,
+                    initialZoom: 15,
+                    onTap: (_, latlng) {
+                      setState(() => _pinLocation = latlng);
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.civiclens.app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _pinLocation,
+                          width: 48,
+                          height: 56,
+                          alignment: Alignment.topCenter,
+                          child: Icon(
+                            Icons.location_pin,
+                            color: cs.error,
+                            size: 48,
+                            shadows: const [
+                              Shadow(blurRadius: 6, color: Colors.black26),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                // Coordinates overlay
+                Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: cs.surface.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(blurRadius: 6, color: Colors.black26),
+                        ],
+                      ),
+                      child: Text(
+                        '${_pinLocation.latitude.toStringAsFixed(5)}, '
+                        '${_pinLocation.longitude.toStringAsFixed(5)}',
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
