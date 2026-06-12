@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -53,10 +54,24 @@ class AuthNotifier extends _$AuthNotifier {
 
   Future<void> signInWithGoogle() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await SupabaseConfig.client.auth.signInWithOAuth(OAuthProvider.google);
-      return SupabaseConfig.client.auth.currentUser;
-    });
+    try {
+      // On web, redirect back to the app's origin after Google auth.
+      // On mobile, use a custom deep-link scheme.
+      final redirectTo = kIsWeb
+          ? '${Uri.base.scheme}://${Uri.base.host}${Uri.base.port != 80 && Uri.base.port != 443 ? ':${Uri.base.port}' : ''}/'
+          : 'io.supabase.civiclens://login-callback/';
+
+      await SupabaseConfig.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: redirectTo,
+        authScreenLaunchMode: LaunchMode.platformDefault,
+      );
+      // After OAuth redirect, the auth stream fires automatically.
+      // Reset state to data(null) so the button re-enables while waiting.
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
   }
 
   Future<void> signOut() async {
