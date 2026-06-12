@@ -38,10 +38,23 @@ class _SubmitReportScreenState extends ConsumerState<SubmitReportScreen> {
   }
 
   Future<void> _loadCurrentLocation() async {
-    final location = await ref.read(currentLocationProvider.future);
-    if (location != null && mounted) {
-      setState(() => _selectedLocation = location);
-    }
+    try {
+      final location = await ref.read(currentLocationProvider.future);
+      if (location != null && mounted) {
+        setState(() => _selectedLocation = location);
+      } else if (mounted) {
+        // Fallback: show a snackbar so the user knows to allow location
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Location unavailable. Allow location access in your browser, then retry.',
+            ),
+            duration: Duration(seconds: 5),
+            action: SnackBarAction(label: 'Retry', onPressed: () => _loadCurrentLocation()),
+          ),
+        );
+      }
+    } catch (_) {}
   }
 
   Future<void> _pickImages() async {
