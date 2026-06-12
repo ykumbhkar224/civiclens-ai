@@ -1,5 +1,4 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,29 +6,34 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/app_routes.dart';
 import 'config/supabase_config.dart';
-import 'services/notification_service.dart';
 
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-}
+// Firebase imports — only used when google-services / GoogleService-Info configured
+// import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: '.env');
 
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  // Firebase is optional until google-services.json / GoogleService-Info.plist
+  // are added. Skip silently so the app starts without push notifications.
+  await _initFirebase();
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
-    publishableKey: SupabaseConfig.publishableKey,
+    anonKey: SupabaseConfig.publishableKey,
   );
 
-  await NotificationService.initialize();
-
   runApp(const ProviderScope(child: CivicLensApp()));
+}
+
+Future<void> _initFirebase() async {
+  // Firebase requires platform-specific config files that are not yet added.
+  // This is a no-op until google-services.json (Android) and
+  // GoogleService-Info.plist (iOS) are placed in the project.
+  if (kDebugMode) {
+    debugPrint('Firebase skipped — add platform config files to enable FCM.');
+  }
 }
 
 class CivicLensApp extends ConsumerWidget {
@@ -57,7 +61,6 @@ class CivicLensApp extends ConsumerWidget {
         seedColor: seedColor,
         brightness: Brightness.light,
       ),
-      // fontFamily: 'Inter', // add after placing font files in assets/fonts/
       appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -86,7 +89,6 @@ class CivicLensApp extends ConsumerWidget {
         seedColor: seedColor,
         brightness: Brightness.dark,
       ),
-      // fontFamily: 'Inter', // add after placing font files in assets/fonts/
       appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
