@@ -54,6 +54,7 @@ dependencies:
   # Storage & Utilities
   shared_preferences: ^2.3.3
   flutter_secure_storage: ^9.2.2
+  # Note: flutter_secure_storage has limited web support; use shared_preferences for web fallback
   path_provider: ^2.1.4
   uuid: ^4.5.1
   intl: ^0.20.0
@@ -87,13 +88,13 @@ flutter:
     - assets/icons/
     - .env
 
-  fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter-Regular.ttf
-        - asset: assets/fonts/Inter-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Inter-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Inter-Bold.ttf
-          weight: 700
+  # fonts:  # Uncomment after adding font files to assets/fonts/
+  #   - family: Inter
+  #     fonts:
+  #       - asset: assets/fonts/Inter-Regular.ttf
+  #       - asset: assets/fonts/Inter-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Inter-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Inter-Bold.ttf
+  #         weight: 700

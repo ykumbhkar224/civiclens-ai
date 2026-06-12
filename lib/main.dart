@@ -57,7 +57,7 @@ class CivicLensApp extends ConsumerWidget {
         seedColor: seedColor,
         brightness: Brightness.light,
       ),
-      fontFamily: 'Inter',
+      // fontFamily: 'Inter', // add after placing font files in assets/fonts/
       appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
@@ -86,7 +86,7 @@ class CivicLensApp extends ConsumerWidget {
         seedColor: seedColor,
         brightness: Brightness.dark,
       ),
-      fontFamily: 'Inter',
+      // fontFamily: 'Inter', // add after placing font files in assets/fonts/
       appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
