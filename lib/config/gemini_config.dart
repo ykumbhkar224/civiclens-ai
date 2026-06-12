@@ -44,15 +44,9 @@ class GeminiConfig {
   );
 
   static List<SafetySetting> get _safetySetting => [
-    SafetySetting(HarmCategory.harassment, HarmBlockThreshold.mediumAndAbove),
-    SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.mediumAndAbove),
-    SafetySetting(
-      HarmCategory.sexuallyExplicit,
-      HarmBlockThreshold.mediumAndAbove,
-    ),
-    SafetySetting(
-      HarmCategory.dangerousContent,
-      HarmBlockThreshold.mediumAndAbove,
-    ),
+    SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium),
+    SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium),
+    SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
+    SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.medium),
   ];
 }

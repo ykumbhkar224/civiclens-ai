@@ -9,16 +9,14 @@ class AppreciationService {
   static const _uuid = Uuid();
 
   Future<List<PublicOfficialModel>> fetchOfficials({String? city, String? department}) async {
-    var query = _client
-        .from('public_officials')
-        .select()
-        .order('appreciation_count', ascending: false);
+    var builder = _client.from('public_officials').select();
+    if (city != null) builder = builder.eq('city', city);
+    if (department != null) builder = builder.eq('department', department);
 
-    if (city != null) query = query.eq('city', city) as dynamic;
-    if (department != null) query = query.eq('department', department) as dynamic;
-
-    final data = await query as List<dynamic>;
-    return data.map((e) => PublicOfficialModel.fromJson(e as Map<String, dynamic>)).toList();
+    final data = await builder.order('appreciation_count', ascending: false);
+    return (data as List<dynamic>)
+        .map((e) => PublicOfficialModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<AppreciationModel>> fetchAppreciationsForOfficial(
@@ -79,19 +77,14 @@ class AppreciationService {
     String? city,
     int limit = 20,
   }) async {
-    var query = _client
-        .from('appreciations')
-        .select()
-        .eq('is_public', true)
+    var builder = _client.from('appreciations').select().eq('is_public', true);
+    if (city != null) builder = builder.eq('public_officials.city', city);
+
+    final data = await builder
         .order('created_at', ascending: false)
         .limit(limit);
-
-    if (city != null) {
-      // Join via officials table
-      query = query.eq('public_officials.city', city) as dynamic;
-    }
-
-    final data = await query as List<dynamic>;
-    return data.map((e) => AppreciationModel.fromJson(e as Map<String, dynamic>)).toList();
+    return (data as List<dynamic>)
+        .map((e) => AppreciationModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

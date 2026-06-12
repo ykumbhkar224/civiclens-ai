@@ -7,7 +7,7 @@ import '../../config/supabase_config.dart';
 
 part 'notifications_screen.g.dart';
 
-class _NotificationItem {
+class NotificationItem {
   final String id;
   final String title;
   final String body;
@@ -15,7 +15,7 @@ class _NotificationItem {
   final bool isRead;
   final String? type;
 
-  const _NotificationItem({
+  const NotificationItem({
     required this.id,
     required this.title,
     required this.body,
@@ -24,8 +24,8 @@ class _NotificationItem {
     this.type,
   });
 
-  factory _NotificationItem.fromJson(Map<String, dynamic> json) {
-    return _NotificationItem(
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
       id: json['id'] as String,
       title: json['title'] as String,
       body: json['body'] as String,
@@ -37,7 +37,7 @@ class _NotificationItem {
 }
 
 @riverpod
-Future<List<_NotificationItem>> userNotifications(Ref ref) async {
+Future<List<NotificationItem>> userNotifications(Ref ref) async {
   final userId = SupabaseConfig.client.auth.currentUser?.id;
   if (userId == null) return [];
 
@@ -49,7 +49,7 @@ Future<List<_NotificationItem>> userNotifications(Ref ref) async {
       .limit(50) as List<dynamic>;
 
   return data
-      .map((e) => _NotificationItem.fromJson(e as Map<String, dynamic>))
+      .map((e) => NotificationItem.fromJson(e as Map<String, dynamic>))
       .toList();
 }
 

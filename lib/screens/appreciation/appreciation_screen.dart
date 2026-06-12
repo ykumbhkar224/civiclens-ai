@@ -4,6 +4,7 @@ import 'package:timeago/timeago.dart' as timeago;
 
 import '../../models/appreciation_model.dart';
 import '../../providers/appreciation_provider.dart';
+import '../../providers/report_provider.dart';
 import '../../services/gemini_service.dart';
 
 class AppreciationScreen extends ConsumerWidget {

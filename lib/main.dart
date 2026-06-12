@@ -24,7 +24,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
+    anonKey: SupabaseConfig.anonKey, // ignore: deprecated_member_use
   );
 
   await NotificationService.initialize();

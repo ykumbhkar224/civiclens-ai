@@ -16,20 +16,18 @@ class ReportService {
     int limit = 20,
     int offset = 0,
   }) async {
-    var query = _client
-        .from('reports')
-        .select()
+    // Build filter string for PostgREST
+    var builder = _client.from('reports').select();
+    if (city != null) builder = builder.eq('city', city);
+    if (category != null) builder = builder.eq('category', category.name);
+    if (status != null) builder = builder.eq('status', status.name);
+
+    final data = await builder
         .order('created_at', ascending: false)
         .range(offset, offset + limit - 1);
-
-    if (city != null) query = query.eq('city', city) as dynamic;
-    if (category != null) {
-      query = query.eq('category', category.name) as dynamic;
-    }
-    if (status != null) query = query.eq('status', status.name) as dynamic;
-
-    final data = await query as List<dynamic>;
-    return data.map((e) => ReportModel.fromJson(e as Map<String, dynamic>)).toList();
+    return (data as List<dynamic>)
+        .map((e) => ReportModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<ReportModel> fetchReportById(String id) async {
