@@ -52,8 +52,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   Future<void> _navigate() async {
     if (!mounted) return;
-    final user = ref.read(currentUserProvider);
-    context.go(user != null ? AppRoutes.home : AppRoutes.login);
+    context.go(AppRoutes.home); // router redirect handles auth gating for protected routes
   }
 
   @override

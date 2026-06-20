@@ -303,6 +303,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 icon: const Icon(Icons.g_mobiledata, size: 26),
                                 label: const Text('Continue with Google'),
                               ),
+                              const SizedBox(height: 10),
+                              OutlinedButton.icon(
+                                onPressed: authState.isLoading
+                                    ? null
+                                    : () => context.push(AppRoutes.phoneOtp),
+                                icon: const Icon(Icons.phone_android_rounded, size: 20),
+                                label: const Text('Continue with Phone'),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton.icon(
+                                onPressed: authState.isLoading
+                                    ? null
+                                    : () async {
+                                        await ref
+                                            .read(authNotifierProvider.notifier)
+                                            .signInAnonymously();
+                                      },
+                                icon: Icon(
+                                  Icons.explore_outlined,
+                                  color: isDark ? Colors.white54 : Colors.black45,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  'Browse Anonymously',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white54 : Colors.black45,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),

@@ -24,14 +24,15 @@ class AuthNotifier extends _$AuthNotifier {
     return AsyncValue.data(SupabaseConfig.client.auth.currentUser);
   }
 
+  // ── Email ──────────────────────────────────────────────────────────────────
   Future<void> signInWithEmail(String email, String password) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final response = await SupabaseConfig.client.auth.signInWithPassword(
+      final res = await SupabaseConfig.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      return response.user;
+      return res.user;
     });
   }
 
@@ -43,22 +44,46 @@ class AuthNotifier extends _$AuthNotifier {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final response = await SupabaseConfig.client.auth.signUp(
+      final res = await SupabaseConfig.client.auth.signUp(
         email: email,
         password: password,
         data: {'full_name': fullName, 'city': city},
       );
-      return response.user;
+      return res.user;
     });
   }
 
+  // ── Phone OTP ──────────────────────────────────────────────────────────────
+  Future<void> sendPhoneOtp(String phone) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await SupabaseConfig.client.auth.signInWithOtp(phone: phone);
+      return null; // OTP sent — no session yet
+    });
+  }
+
+  Future<void> verifyPhoneOtp({
+    required String phone,
+    required String token,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final res = await SupabaseConfig.client.auth.verifyOTP(
+        phone: phone,
+        token: token,
+        type: OtpType.sms,
+      );
+      return res.user;
+    });
+  }
+
+  // ── Google OAuth ───────────────────────────────────────────────────────────
   Future<void> signInWithGoogle() async {
     state = const AsyncValue.loading();
     try {
-      // On web, redirect back to the app's origin after Google auth.
-      // On mobile, use a custom deep-link scheme.
       final redirectTo = kIsWeb
-          ? '${Uri.base.scheme}://${Uri.base.host}${Uri.base.port != 80 && Uri.base.port != 443 ? ':${Uri.base.port}' : ''}/'
+          ? '${Uri.base.scheme}://${Uri.base.host}'
+              '${Uri.base.port != 80 && Uri.base.port != 443 ? ':${Uri.base.port}' : ''}/'
           : 'io.supabase.civiclens://login-callback/';
 
       await SupabaseConfig.client.auth.signInWithOAuth(
@@ -66,14 +91,22 @@ class AuthNotifier extends _$AuthNotifier {
         redirectTo: redirectTo,
         authScreenLaunchMode: LaunchMode.platformDefault,
       );
-      // After OAuth redirect, the auth stream fires automatically.
-      // Reset state to data(null) so the button re-enables while waiting.
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
+  // ── Anonymous ──────────────────────────────────────────────────────────────
+  Future<void> signInAnonymously() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final res = await SupabaseConfig.client.auth.signInAnonymously();
+      return res.user;
+    });
+  }
+
+  // ── Sign out ───────────────────────────────────────────────────────────────
   Future<void> signOut() async {
     await SupabaseConfig.client.auth.signOut();
     state = const AsyncValue.data(null);
