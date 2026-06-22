@@ -62,8 +62,7 @@ dependencies:
   url_launcher: ^6.3.1
   share_plus: ^10.0.2
 
-  # Environment
-  flutter_dotenv: ^5.2.1
+  # flutter_dotenv removed — secrets injected at build time via --dart-define-from-file=.env
 
 dev_dependencies:
   flutter_test:
@@ -87,7 +86,6 @@ flutter:
     - assets/images/
     - assets/animations/
     - assets/icons/
-    - .env
 
   # fonts:  # Uncomment after adding font files to assets/fonts/
   #   - family: Inter

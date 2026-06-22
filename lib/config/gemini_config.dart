@@ -1,8 +1,8 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiConfig {
-  static String get apiKey => dotenv.env['GEMINI_API_KEY']!;
+  static const String apiKey =
+      String.fromEnvironment('GEMINI_API_KEY');
 
   // Primary model for text analysis, classification, and civic content
   static GenerativeModel get flashModel => GenerativeModel(
